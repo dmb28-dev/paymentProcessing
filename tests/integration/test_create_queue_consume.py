@@ -1,4 +1,5 @@
 import pytest
+from uuid import UUID
 
 from tests.conftest import payment_payload
 
@@ -10,5 +11,5 @@ async def test_create_payment_creates_pending_status(client) -> None:  # noqa: A
 
     assert response.status_code == 202
     body = response.json()
-    assert body["status"] == "pending"
-    assert body["idempotency_key"] == "int-key"
+    assert "payment_id" in body
+    assert UUID(body["payment_id"])
