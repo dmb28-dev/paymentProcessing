@@ -123,3 +123,6 @@ pythonenv*
 
 # Project stuff
 poetry.lock
+
+# VScode settings
+.vscode/
