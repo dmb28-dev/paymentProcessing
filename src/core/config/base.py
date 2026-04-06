@@ -3,7 +3,6 @@ from pydantic_settings import SettingsConfigDict
 
 
 class BaseSettings(PydanticBaseSettings):
-    """Только для корневого класса настроек; вложенные группы — `pydantic.BaseModel`."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
