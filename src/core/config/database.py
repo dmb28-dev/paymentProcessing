@@ -1,13 +1,9 @@
 from pydantic import BaseModel, ConfigDict, Field, PostgresDsn, field_validator
 
+from src.core.config.base import BaseSettings
 
-class DatabaseSettings(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    database_url: PostgresDsn | str = Field(
-        default="postgresql+asyncpg://payments:payments@localhost:5432/payments",
-        alias="DATABASE_URL",
-    )
+class DatabaseSettings(BaseSettings):
+    database_url: PostgresDsn | str = Field(...,alias="DATABASE_URL",)
 
     @field_validator("database_url", mode="after")
     @classmethod

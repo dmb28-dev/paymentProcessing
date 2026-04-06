@@ -17,7 +17,7 @@ class ApplicationSettings(BaseSettings):
     outbox_poll_interval_seconds: int = Field(default=1, alias="OUTBOX_POLL_INTERVAL_SECONDS")
     webhook_timeout_seconds: int = Field(default=5, alias="WEBHOOK_TIMEOUT_SECONDS")
 
-    db: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    db: DatabaseSettings = DatabaseSettings()
     api: ClientApi = Field(default_factory=ClientApi)
     log: LogSettings = Field(default_factory=LogSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)

@@ -1,26 +1,32 @@
+from typing import Annotated
+
+from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Response, status
 
-from src.dependency.uow_container import get_uow
+from src.dependency.container import Container
 from src.modules import payment_router as router
 from src.modules.payment.infrastructure.dto import (
     CreatePaymentInput,
     CreatePaymentRequest,
     CreatePaymentResponse,
 )
-from src.modules.payment.infrastructure.uow import PaymentUow
-from src.modules.payment.use_case.create_payment.impl import invoke as create_payment_invoke
+from src.modules.payment.use_case.create_payment.impl import CreatePaymentUseCase
 from src.modules.utils.validate_dependencies import require_idempotency_key
 
 
-@router.post("", response_model=CreatePaymentResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("", response_model=CreatePaymentResponse, status_code=status.HTTP_201_CREATED)
+@inject
 async def invoke(
     payload: CreatePaymentRequest,
     response: Response,
+    use_case: Annotated[
+        CreatePaymentUseCase,
+        Depends(Provide[Container.create_payment_use_case]),
+    ],
     idempotency_key: str = Depends(require_idempotency_key),
-    uow: PaymentUow = Depends(get_uow),
 ) -> CreatePaymentResponse:
-    dto = await create_payment_invoke(
-        data=CreatePaymentInput(
+    dto = await use_case.invoke(
+        CreatePaymentInput(
             amount=payload.amount,
             currency=payload.currency,
             description=payload.description,
@@ -28,7 +34,5 @@ async def invoke(
             webhook_url=str(payload.webhook_url),
             idempotency_key=idempotency_key,
         ),
-        uow=uow,
     )
-    response.status_code = status.HTTP_202_ACCEPTED
     return dto

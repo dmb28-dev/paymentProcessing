@@ -1,6 +1,13 @@
-from src.core.config import settings
-from src.core.containers import CoreContainer, build_core_container
+from dependency_injector.containers import WiringConfiguration, copy
+
+from src.dependency.use_case_container import UseCaseContainer
+from src.utils.wiring_modules import find_wiring_modules
 
 
-def invoke() -> CoreContainer:
-    return build_core_container(settings=settings)
+@copy(UseCaseContainer)
+class Container(UseCaseContainer):
+    wiring_config = WiringConfiguration(modules=find_wiring_modules())
+
+
+def invoke() -> Container:
+    return Container()

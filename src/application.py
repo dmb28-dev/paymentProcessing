@@ -12,9 +12,15 @@ from src.dependency.container import invoke as build_container
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     container = build_container()
+    db = container.db()
+    await db.connect(pool_pre_ping=True)
+    db.init_session_factory()
+    container.wire()
+    app.container = container
     app.state.core_container = container
     yield
-    await container.engine.dispose()
+    container.unwire()
+    await db.disconnect()
 
 
 def create_app() -> FastAPI:
@@ -23,7 +29,10 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
         dependencies=[Depends(require_api_key)],
         docs_url=f"/{settings.app_type.value}/payment/docs",
+        openapi_url=f"/{settings.app_type.value}/payment/openapi.json"
     )
     register_error_handlers(app)
     include_routers(app)
     return app
+
+app = create_app()

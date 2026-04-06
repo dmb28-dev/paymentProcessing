@@ -1,11 +1,24 @@
-# payment-processing-service
+# PaymentProcessingService
+
+Асинхронный микросервис обработки платежей: REST API на FastAPI, PostgreSQL (SQLAlchemy 2 + asyncpg), публикация событий через RabbitMQ (FastStream), паттерн **transactional outbox**, доставка вебхуков и отдельный **consumer** для outbox и обработки очереди.
+
+# Автор сервиса Беляев Дмитрий Андреевич
+
+## Стек
+
+- Python 3.12+
+- FastAPI, Pydantic v2, Uvicorn
+- SQLAlchemy 2.0, Alembic, asyncpg
+- RabbitMQ: FastStream
+- DI: dependency-injector
+- Тесты: pytest, pytest-asyncio, httpx (ASGI)
 
 ## Структура проекта
 
 ```text
 paymentProcessing/
-├─ main.py
-├─ consumer.py
+├─ main.py                 # точка входа API (uvicorn)
+├─ consumer.py             # точка входа consumer
 ├─ alembic.ini
 ├─ pyproject.toml
 ├─ Dockerfile.api
@@ -13,28 +26,17 @@ paymentProcessing/
 ├─ docker-compose.yml
 ├─ .env.example
 ├─ src/
-│  ├─ application.py
-│  ├─ consumer.py
+│  ├─ application.py       # FastAPI app, lifespan, роутеры
+│  ├─ consumer.py          # outbox poll, RabbitMQ, вебхуки
 │  ├─ core/
-│  │  ├─ config/
-│  │  ├─ fastapi/
+│  │  ├─ config/           # настройки (БД, RabbitMQ, API key, …)
+│  │  ├─ fastapi/          # auth, ошибки, подключение роутов
 │  │  └─ containers.py
-│  ├─ dependency/
-│  │  ├─ container.py
-│  │  ├─ uow_container.py
-│  │  └─ use_case_container.py
-│  ├─ modules/
-│  │  ├─ __init__.py
-│  │  └─ payment/
-│  │     ├─ domain/
-│  │     ├─ infrastructure/
-│  │     └─ use_case/
-│  │        ├─ create_payment/
-│  │        └─ get_payment/
-│  ├─ persistance/
-│  ├─ adapters/
-│  │  └─ rabbitmq/
-│  └─ clients/
+│  ├─ dependency/          # DI-контейнеры (use case, UoW)
+│  ├─ modules/payment/     # domain, infrastructure, use cases
+│  ├─ persistance/         # сущности и репозитории (payment, outbox)
+│  ├─ adapters/            # rabbitmq, webhook
+│  └─ clients/             # эмуляция платёжного шлюза
 ├─ migrations/
 │  ├─ env.py
 │  └─ versions/
@@ -42,22 +44,61 @@ paymentProcessing/
    ├─ conftest.py
    ├─ unit/
    ├─ integration/
-   └─ e2e/
+   └─ smoke/
 ```
 
 ## Переменные окружения
 
-Скопируйте `.env.example` в `.env`.
+Скопируйте `.env.example` в `.env` и при необходимости поправьте значения.
 
-Важно:
-- Если запускаете **на хосте**, используйте `localhost` в `DATABASE_URL`/`RABBITMQ_URL`.
-- Если запускаете **в Docker Compose**, можно использовать имена сервисов (`postgres`, `rabbitmq`).
+| Переменная | Назначение |
+|------------|------------|
+| `APP_NAME`, `APP_VERSION` | Метаданные сервиса |
+| `APP_ENV` | Окружение: `local`, `dev`, `prod` |
+| `APP_TYPE` | Префикс URL API и Swagger (см. ниже). Пример: `internal/api` |
+| `DATABASE_URL` | Async SQLAlchemy URL, например `postgresql+asyncpg://…` |
+| `SERVER_HOST`, `SERVER_PORT` | Хост и порт HTTP API |
+| `API_KEY` | Ключ для заголовка `X-API-Key` |
+| `RABBITMQ_URL` | AMQP, например `amqp://guest:guest@rabbitmq:5672/` |
+| `OUTBOX_POLL_INTERVAL_SECONDS` | Интервал опроса outbox в consumer |
+| `WEBHOOK_TIMEOUT_SECONDS` | Таймаут HTTP при вызове вебхука |
+| `LOG_LEVEL` | Уровень логирования |
 
-## Запуск
+**Хост vs Docker:** на машине разработчика в `DATABASE_URL` / `RABBITMQ_URL` обычно указывают `localhost`. В Compose — имена сервисов (`postgres`, `rabbitmq`). PostgreSQL наружу проброшен как **5433 → 5432** (см. `docker-compose.yml`).
+
+## Установка и запуск
+
+### Зависимости
+
+```bash
+poetry install
+```
+
+### Docker Compose (API + consumer + Postgres + RabbitMQ)
 
 ```bash
 docker compose up --build
 ```
+
+После старта примените миграции (из хоста с установленным Poetry, при необходимости подставьте `localhost:5433` в `DATABASE_URL`):
+
+```bash
+poetry run alembic upgrade head
+```
+
+### Локально без Docker
+
+Поднимите PostgreSQL и RabbitMQ, задайте в `.env` URL с `localhost`, затем:
+
+```bash
+poetry run alembic upgrade head
+# в одном терминале
+poetry run api
+# в другом — consumer
+poetry run consumer
+```
+
+Эквивалентно скриптам из `pyproject.toml`: `api` → `main:main`, `consumer` → `consumer:main`.
 
 ## Миграции
 
@@ -65,27 +106,40 @@ docker compose up --build
 poetry run alembic upgrade head
 ```
 
-## Тесты
+## Тесты и линтер
 
 ```bash
 poetry run pytest
+poetry run ruff check .
 ```
 
-## Swagger
+## Префикс API и Swagger
 
-- Swagger UI: `http://localhost:8000/docs`
-- OpenAPI: `http://localhost:8000/openapi.json`
+Базовый путь к платежам задаётся через `APP_TYPE` (значение enum `AppType`, например `internal/api` из `.env.example`):
 
-Авторизация:
-- Нажмите **Authorize** в Swagger UI и задайте `X-API-Key` один раз — после этого он будет подставляться во все запросы автоматически.
+- **Платежи:** `/{APP_TYPE}/payment/v1/payments`
+- **Swagger UI:** `/{APP_TYPE}/payment/docs`
+- **OpenAPI JSON:** `/{APP_TYPE}/payment/openapi.json`
 
-## API примеры
+Пример для `APP_TYPE=internal/api`:
 
-### Create payment
+- Swagger: `http://localhost:8000/internal/api/payment/docs`
+- Создание платежа: `POST http://localhost:8000/internal/api/payment/v1/payments`
+
+Авторизация в Swagger: **Authorize** → заголовок `X-API-Key` (совпадает с `API_KEY` в `.env`).
+
+## Примеры API
+
+Подставьте свой префикс вместо `internal/api`, если изменили `APP_TYPE`.
+
+### Создать платеж
+
+Обязательны заголовки `X-API-Key` и `Idempotency-Key`. Ответ при успехе — **201 Created**.
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/payments" \
+curl -X POST "http://localhost:8000/internal/api/payment/v1/payments" \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-secret-key" \
   -H "Idempotency-Key: order-123" \
   -d '{
     "amount": "100.00",
@@ -96,22 +150,22 @@ curl -X POST "http://localhost:8000/api/v1/payments" \
   }'
 ```
 
-Ответ:
+Пример тела ответа:
 
 ```json
 {"payment_id":"<uuid>"}
 ```
 
-### Get payment
+### Получить платеж
 
 ```bash
-curl -X GET "http://localhost:8000/api/v1/payments/<payment_id>" \
+curl -X GET "http://localhost:8000/internal/api/payment/v1/payments/<payment_id>" \
   -H "X-API-Key: dev-secret-key"
 ```
 
 ## Проверка DLQ
 
-1. Укажите недоступный `webhook_url`.
-2. Создайте платеж.
-3. Откройте RabbitMQ UI: `http://localhost:15672` (`guest/guest`).
-4. Проверьте очередь `payments.dlq`.
+1. Укажите недоступный `webhook_url` при создании платежа.
+2. Дождитесь обработки consumer’ом (outbox → очередь → вебхук).
+3. Откройте RabbitMQ Management: `http://localhost:15672` (по умолчанию `guest` / `guest`).
+4. Проверьте очередь `payments.dlq` (`DLQ_QUEUE` в `src/utils/constants.py`).

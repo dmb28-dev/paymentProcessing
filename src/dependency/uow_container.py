@@ -1,9 +1,13 @@
-from fastapi import Request
+from dependency_injector import providers
+from dependency_injector.containers import copy
 
+from src.core.containers import CoreContainer
 from src.modules.payment.infrastructure.uow import PaymentUow
 
 
-async def get_uow(request: Request):
-    session_factory = request.app.state.core_container.session_factory
-    async with PaymentUow(session_factory) as uow:
-        yield uow
+@copy(CoreContainer)
+class UowContainer(CoreContainer):
+    payment_uow = providers.Factory(
+        PaymentUow,
+        session_factory=CoreContainer.db.provided.session_factory,
+    )
