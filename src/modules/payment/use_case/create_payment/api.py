@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Response, status
 
 from src.dependency.container import Container
+from src.dependency.parse_token import TokenVerify, UserToken
 from src.modules import payment_router as router
 from src.modules.payment.infrastructure.dto import (
     CreatePaymentInput,
@@ -18,12 +19,12 @@ from src.modules.utils.validate_dependencies import require_idempotency_key
 @inject
 async def invoke(
     payload: CreatePaymentRequest,
-    response: Response,
     use_case: Annotated[
         CreatePaymentUseCase,
         Depends(Provide[Container.create_payment_use_case]),
     ],
     idempotency_key: str = Depends(require_idempotency_key),
+    user_info: UserToken = Depends(TokenVerify()),
 ) -> CreatePaymentResponse:
     dto = await use_case.invoke(
         CreatePaymentInput(

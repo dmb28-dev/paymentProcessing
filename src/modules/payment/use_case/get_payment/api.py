@@ -5,6 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import Depends
 
 from src.dependency.container import Container
+from src.dependency.parse_token import TokenVerify, UserToken
 from src.modules import payment_router as router
 from src.modules.payment.infrastructure.dto import PaymentResponse
 from src.modules.payment.use_case.get_payment.impl import GetPaymentUseCase
@@ -18,5 +19,6 @@ async def invoke(
         GetPaymentUseCase,
         Depends(Provide[Container.get_payment_use_case]),
     ],
+    user_info: UserToken = Depends(TokenVerify()),
 ) -> PaymentResponse:
     return await use_case.invoke(payment_id)

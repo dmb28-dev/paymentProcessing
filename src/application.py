@@ -3,7 +3,6 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 
 from src.core.config import settings
-from src.core.fastapi.auth import require_api_key
 from src.core.fastapi.errors import register_error_handlers
 from src.core.fastapi.routes import include_routers
 from src.dependency.container import invoke as build_container
@@ -25,9 +24,8 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="payment-processing-service",
+        title="paymentProcessingService",
         lifespan=lifespan,
-        dependencies=[Depends(require_api_key)],
         docs_url=f"/{settings.app_type.value}/payment/docs",
         openapi_url=f"/{settings.app_type.value}/payment/openapi.json"
     )

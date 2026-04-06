@@ -29,3 +29,8 @@ class OutboxStatus(StrEnum):
     PENDING = "pending"
     PUBLISHED = "published"
     FAILED = "failed"
+
+
+class UserRole(StrEnum):
+    defualt = "ROLE.DEFUALT"
+    admin = "ROLE.ADMIN"

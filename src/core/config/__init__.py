@@ -1,6 +1,5 @@
 from pydantic import Field
 
-from src.core.config.api import ClientApi
 from src.core.config.base import BaseSettings
 from src.core.config.database import DatabaseSettings
 from src.core.config.log import LogSettings
@@ -11,6 +10,8 @@ from src.utils.enums import ApplicationEnvironment, AppType
 
 class ApplicationSettings(BaseSettings):
 
+    jwt_secret_key: str = Field(alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     app_env: ApplicationEnvironment = Field(default=ApplicationEnvironment.prod, alias="APP_ENV")
     app_type: AppType = Field(default=AppType.api, alias="APP_TYPE")
     app_name: str = Field(default="payment-processing-service", alias="APP_NAME")
@@ -18,7 +19,6 @@ class ApplicationSettings(BaseSettings):
     webhook_timeout_seconds: int = Field(default=5, alias="WEBHOOK_TIMEOUT_SECONDS")
 
     db: DatabaseSettings = DatabaseSettings()
-    api: ClientApi = Field(default_factory=ClientApi)
     log: LogSettings = Field(default_factory=LogSettings)
     server: ServerSettings = Field(default_factory=ServerSettings)
     rabbitmq: RabbitSettings = Field(default_factory=RabbitSettings)

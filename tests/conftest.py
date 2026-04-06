@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
 from typing import Any
+from uuid import uuid4
 
+import jwt
 import pytest_asyncio
 from dependency_injector import providers
 from fastapi import FastAPI
@@ -16,9 +18,37 @@ from src.modules.payment.use_case.get_payment.impl import GetPaymentUseCase
 from src.persistance.base import Base
 from src.persistance.outbox import entity as _outbox_entity
 from src.persistance.payment import entity as _payment_entity
+from src.utils.enums import AppType, UserRole
 
-# Совпадает с prefix в src.modules.payment_router
+# Must match payment_router prefix in src.modules
 PAYMENTS_API_BASE = f"/{settings.app_type.value}/payment/v1/payments"
+
+
+def _issue_test_jwt() -> str:
+    payload = {
+        "uuid": str(uuid4()),
+        "full_name_ru": "Test User",
+        "roles": [UserRole.defualt.value],
+        "email": "test@example.com",
+        "groups": [],
+    }
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def payment_auth_headers(*, idempotency_key: str | None = None) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    token = _issue_test_jwt()
+    if settings.app_type == AppType.internal:
+        headers["X-User-Token"] = token
+    else:
+        headers["Authorization"] = f"Bearer {token}"
+    if idempotency_key is not None:
+        headers["Idempotency-Key"] = idempotency_key
+    return headers
 
 
 @pytest_asyncio.fixture

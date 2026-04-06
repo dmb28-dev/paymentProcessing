@@ -30,8 +30,8 @@ paymentProcessing/
 │  ├─ application.py       # FastAPI app, lifespan, роутеры
 │  ├─ consumer.py          # outbox poll, RabbitMQ, вебхуки
 │  ├─ core/
-│  │  ├─ config/           # настройки (БД, RabbitMQ, API key, …)
-│  │  ├─ fastapi/          # auth, ошибки, подключение роутов
+│  │  ├─ config/           # настройки (БД, RabbitMQ, JWT, …)
+│  │  ├─ fastapi/          # ошибки, подключение роутов
 │  │  └─ containers.py
 │  ├─ dependency/          # DI-контейнеры (use case, UoW)
 │  ├─ modules/payment/     # domain, infrastructure, use cases
@@ -59,7 +59,7 @@ paymentProcessing/
 | `APP_TYPE` | Префикс URL API и Swagger (см. ниже). Пример: `internal/api` |
 | `DATABASE_URL` | Async SQLAlchemy URL, например `postgresql+asyncpg://…` |
 | `SERVER_HOST`, `SERVER_PORT` | Хост и порт HTTP API |
-| `API_KEY` | Ключ для заголовка `X-API-Key` |
+| `JWT_SECRET_KEY`, `JWT_ALGORITHM` | Секрет и алгоритм подписи JWT (см. `src/dependency/parse_token.py`) |
 | `RABBITMQ_URL` | AMQP, например `amqp://guest:guest@rabbitmq:5672/` |
 | `OUTBOX_POLL_INTERVAL_SECONDS` | Интервал опроса outbox в consumer |
 | `WEBHOOK_TIMEOUT_SECONDS` | Таймаут HTTP при вызове вебхука |
@@ -127,7 +127,7 @@ poetry run ruff check .
 - Swagger: `http://localhost:8000/internal/api/payment/docs`
 - Создание платежа: `POST http://localhost:8000/internal/api/payment/v1/payments`
 
-Авторизация в Swagger: **Authorize** → заголовок `X-API-Key` (совпадает с `API_KEY` в `.env`).
+Доступ к операциям с платежами — по **JWT** (см. `src/dependency/parse_token.py`): при `APP_TYPE=api` — `Authorization: Bearer <token>`, при `APP_TYPE=internal/api` — `X-User-Token: <token>`.
 
 ## Примеры API
 
@@ -135,12 +135,12 @@ poetry run ruff check .
 
 ### Создать платеж
 
-Обязательны заголовки `X-API-Key` и `Idempotency-Key`. Ответ при успехе — **201 Created**.
+Обязательны заголовок JWT (см. выше) и `Idempotency-Key`. Ответ при успехе — **201 Created**.
 
 ```bash
 curl -X POST "http://localhost:8000/internal/api/payment/v1/payments" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-secret-key" \
+  -H "X-User-Token: <jwt>" \
   -H "Idempotency-Key: order-123" \
   -d '{
     "amount": "100.00",
@@ -161,7 +161,7 @@ curl -X POST "http://localhost:8000/internal/api/payment/v1/payments" \
 
 ```bash
 curl -X GET "http://localhost:8000/internal/api/payment/v1/payments/<payment_id>" \
-  -H "X-API-Key: dev-secret-key"
+  -H "X-User-Token: <jwt>"
 ```
 
 ## Проверка DLQ
