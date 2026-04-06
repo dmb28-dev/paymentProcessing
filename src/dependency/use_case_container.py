@@ -7,11 +7,11 @@ from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.modules.payment.infrastructure.dto import CreatePaymentInput, PaymentResponse
+from src.modules.payment.infrastructure.uow import PaymentUow
 from src.modules.payment.use_case.create_payment.impl import (
     invoke as create_payment_invoke,
 )
 from src.modules.payment.use_case.get_payment.impl import invoke as get_payment_invoke
-from src.modules.payment.infrastructure.uow import PaymentUow
 
 
 @dataclass(slots=True, frozen=True)

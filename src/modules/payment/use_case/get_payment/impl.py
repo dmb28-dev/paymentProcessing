@@ -8,7 +8,7 @@ from src.modules.payment.infrastructure.uow import PaymentUow
 
 
 async def invoke(*, payment_id: UUID, uow: PaymentUow) -> PaymentResponse:
-    
+
     payment = await uow.payments.get_by_id(payment_id=payment_id)
     if payment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not found")

@@ -1,6 +1,18 @@
 from enum import StrEnum
 
 
+class ApplicationEnvironment(StrEnum):
+    local = "local"
+    dev = "dev"
+    prod = "prod"
+
+
+class AppType(StrEnum):
+    api = "api"
+    internal = "internal/api"
+    srv = "srv"
+
+
 class Currency(StrEnum):
     RUB = "RUB"
     USD = "USD"

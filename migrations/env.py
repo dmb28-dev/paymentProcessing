@@ -5,7 +5,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from src.core.config import get_settings
+from src.core.config import settings
 from src.persistance.base import Base
 from src.persistance.outbox import entity as _outbox_entity
 from src.persistance.payment import entity as _payment_entity
@@ -14,8 +14,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+config.set_main_option("sqlalchemy.url", settings.db.database_url)
 _ = (_payment_entity, _outbox_entity)
 target_metadata = Base.metadata
 

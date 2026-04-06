@@ -1,13 +1,10 @@
-from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.modules.payment.domain.aggregate.model import OutboxEvent, Payment
-from src.persistance.outbox.entity import OutboxModel
+from src.modules.payment.domain.aggregate.model import Payment
 from src.persistance.payment.entity import PaymentModel
-from src.utils.enums import OutboxStatus
 
 
 class PaymentRepository:
@@ -15,7 +12,9 @@ class PaymentRepository:
         self.session = session
 
     async def get_by_id(self, *, payment_id: UUID) -> PaymentModel | None:
-        result = await self.session.execute(select(PaymentModel).where(PaymentModel.id == payment_id))
+        result = await self.session.execute(
+            select(PaymentModel).where(PaymentModel.id == payment_id)
+        )
         return result.scalar_one_or_none()
 
     async def get_by_idempotency_key(self, *, idempotency_key: str) -> PaymentModel | None:

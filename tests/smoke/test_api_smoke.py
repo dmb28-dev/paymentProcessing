@@ -4,7 +4,7 @@ from tests.conftest import payment_payload
 
 
 @pytest.mark.asyncio
-async def test_create_and_get_payment_smoke(client) -> None:  # noqa: ANN001
+async def test_create_and_get_payment_smoke(client) -> None:
     headers = {"X-API-Key": "dev-secret-key", "Idempotency-Key": "smoke-key"}
     create_response = await client.post("/api/v1/payments", json=payment_payload(), headers=headers)
     assert create_response.status_code == 202

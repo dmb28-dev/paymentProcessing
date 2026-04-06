@@ -1,6 +1,6 @@
 from faststream.rabbit import ExchangeType, RabbitBroker, RabbitExchange, RabbitQueue
 
-from src.core.config import get_settings
+from src.core.config import settings
 from src.utils.constants import (
     DLQ_EXCHANGE,
     DLQ_QUEUE,
@@ -10,8 +10,7 @@ from src.utils.constants import (
     PAYMENTS_ROUTING_KEY,
 )
 
-settings = get_settings()
-broker = RabbitBroker(settings.rabbitmq_url)
+broker = RabbitBroker(settings.rabbitmq.url)
 
 payments_exchange = RabbitExchange(
     PAYMENTS_EXCHANGE,

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
+from src.core.config import settings
 from src.core.fastapi.auth import require_api_key
 from src.core.fastapi.errors import register_error_handlers
 from src.core.fastapi.routes import include_routers
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
         title="payment-processing-service",
         lifespan=lifespan,
         dependencies=[Depends(require_api_key)],
+        docs_url=f"/{settings.app_type.value}/payment/docs",
     )
     register_error_handlers(app)
     include_routers(app)

@@ -3,23 +3,27 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from faststream.rabbit import RabbitMessage
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from loguru import logger
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.adapters.webhook.webhook_client import send_webhook_with_retry
-from src.adapters.rabbitmq.broker import broker, dlq_exchange, dlq_queue, payments_exchange, payments_queue
+from src.adapters.rabbitmq.broker import (
+    broker,
+    dlq_exchange,
+    dlq_queue,
+    payments_exchange,
+    payments_queue,
+)
 from src.adapters.rabbitmq.publisher import publish_payment_created
+from src.adapters.webhook.webhook_client import send_webhook_with_retry
 from src.clients.payment_gateway_client import emulate_payment_gateway
-from src.core.config import get_settings
+from src.core.config import settings
 from src.modules.payment.infrastructure.uow import PaymentUow
 from src.utils.constants import DLQ_QUEUE, MAX_RETRIES
 from src.utils.enums import PaymentStatus
 
-from loguru import logger
-
 
 async def dispatch_outbox_forever() -> None:
-    settings = get_settings()
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    engine = create_async_engine(settings.db.database_url, pool_pre_ping=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     # Ensure exchanges/queues are declared before first publish.
@@ -56,7 +60,6 @@ async def dispatch_outbox_forever() -> None:
 
 @broker.subscriber(payments_queue)
 async def consume_payment_created(payload: dict[str, str], msg: RabbitMessage) -> None:
-    settings = get_settings()
     payment_id = payload.get("payment_id")
     if payment_id is None:
         logger.bind(payload=payload).warning("message missing payment_id, sending to dlq")
@@ -68,7 +71,7 @@ async def consume_payment_created(payload: dict[str, str], msg: RabbitMessage) -
         await msg.ack()
         return
 
-    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    engine = create_async_engine(settings.db.database_url, pool_pre_ping=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with PaymentUow(session_factory) as uow:

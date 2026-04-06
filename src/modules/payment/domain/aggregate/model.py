@@ -33,7 +33,7 @@ class Payment:
         metadata: dict[str, Any],
         webhook_url: str,
         idempotency_key: str,
-    ) -> "Payment":
+    ) -> Payment:
         validated_amount = Amount(amount=amount, currency=currency)
         validated_idempotency_key = IdempotencyKey(value=idempotency_key)
         validated_webhook_url = WebhookUrl(value=webhook_url)
@@ -89,7 +89,7 @@ class OutboxEvent:
     next_retry_at: datetime
 
     @classmethod
-    def payment_created(cls, *, payment_id: UUID) -> "OutboxEvent":
+    def payment_created(cls, *, payment_id: UUID) -> OutboxEvent:
         return cls(
             aggregate_type="payment",
             aggregate_id=payment_id,

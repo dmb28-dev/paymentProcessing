@@ -1,11 +1,12 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from tests.conftest import payment_payload
 
 
 @pytest.mark.asyncio
-async def test_create_payment_creates_pending_status(client) -> None:  # noqa: ANN001
+async def test_create_payment_creates_pending_status(client) -> None:
     headers = {"X-API-Key": "dev-secret-key", "Idempotency-Key": "int-key"}
     response = await client.post("/api/v1/payments", json=payment_payload(), headers=headers)
 

@@ -5,10 +5,10 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-
-from src.core.config import get_settings
-
 from loguru import logger
+
+from src.core.config import settings
+from src.utils.enums import ApplicationEnvironment
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -42,8 +42,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         logger.bind(method=request.method, path=request.url.path).exception("unhandled error")
-        settings = get_settings()
-        if settings.app_env == "local":
+        if settings.app_env == ApplicationEnvironment.local:
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={

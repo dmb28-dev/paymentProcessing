@@ -4,7 +4,7 @@ from tests.conftest import payment_payload
 
 
 @pytest.mark.asyncio
-async def test_create_payment_is_idempotent(client) -> None:  # noqa: ANN001
+async def test_create_payment_is_idempotent(client) -> None:
     headers = {"X-API-Key": "dev-secret-key", "Idempotency-Key": "same-key"}
     first = await client.post("/api/v1/payments", json=payment_payload(), headers=headers)
     second = await client.post("/api/v1/payments", json=payment_payload(), headers=headers)

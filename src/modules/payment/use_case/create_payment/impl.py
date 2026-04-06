@@ -4,7 +4,7 @@ from src.modules.payment.infrastructure.uow import PaymentUow
 
 
 async def invoke(*, data: CreatePaymentInput, uow: PaymentUow) -> CreatePaymentResponse:
-    
+
     existing_payment = await uow.payments.get_by_idempotency_key(idempotency_key=data.idempotency_key)
     if existing_payment is not None:
         return CreatePaymentResponse(payment_id=existing_payment.id)

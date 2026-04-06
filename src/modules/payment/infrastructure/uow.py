@@ -17,7 +17,7 @@ class PaymentUow:
         self.outbox = OutboxRepository(self.session)
         return self
 
-    async def __aexit__(self, exc_type, exc, tb) -> None:  # noqa: ANN001
+    async def __aexit__(self, exc_type, exc, tb) -> None:
         if self.session is None:
             return
         if exc is None:
